@@ -1,0 +1,1693 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Ui noise Player</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #2c3e50;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+      }
+
+      .container {
+        background: #ecf0f1;
+        padding: 2rem 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        width: 100%;
+        max-width: 1100px;
+      }
+
+      .player-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+        text-align: left;
+      }
+
+      .left-column,
+      .right-column {
+        min-width: 0;
+      }
+
+      .left-column {
+        text-align: center;
+      }
+
+      .right-column {
+        text-align: left;
+      }
+
+      h2 {
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+
+      .description {
+        margin-top: 0;
+        color: #555;
+      }
+
+      /*SETTINGS*/
+
+      .settings {
+        margin-top: 25px;
+        text-align: left;
+      }
+
+      .setting {
+        margin: 18px 0;
+      }
+
+      .setting label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 7px;
+      }
+
+      .setting-value {
+        font-weight: normal;
+        margin-left: 5px;
+      }
+
+      .interval-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      .interval-input {
+        width: 100%;
+        padding: 9px;
+        font-size: 16px;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+        background: white;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        cursor: pointer;
+      }
+
+      /*BUTTONS*/
+
+      .buttons {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      button {
+        padding: 11px 22px;
+        font-size: 15px;
+        font-weight: bold;
+        margin: 6px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+
+      button:hover {
+        opacity: 0.9;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      button:disabled {
+        background-color: #95a5a6 !important;
+        cursor: not-allowed;
+        opacity: 1;
+      }
+
+      #startBtn {
+        background-color: #27ae60;
+      }
+
+      #stopBtn {
+        background-color: #e74c3c;
+      }
+
+      /*STATUS*/
+
+      #status {
+        margin-top: 20px;
+        font-size: 1.05rem;
+        color: #7f8c8d;
+        min-height: 24px;
+      }
+
+      .error {
+        color: #c0392b !important;
+      }
+
+      /*VOICE LIST*/
+
+      .voice-list-container {
+        margin-top: 30px;
+        text-align: left;
+      }
+
+      .voice-list-title {
+        margin-bottom: 10px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .voice-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 420px;
+        overflow-y: auto;
+        padding: 5px;
+      }
+
+      .voice-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: white;
+        border: 1px solid #d5d8dc;
+        border-radius: 7px;
+        padding: 9px 10px;
+      }
+
+      .voice-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+      }
+
+      .preview-btn {
+        background-color: #3498db;
+        padding: 7px 14px;
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      .preview-btn.playing {
+        background-color: #8e44ad;
+      }
+
+      .no-voices {
+        color: #7f8c8d;
+        text-align: center;
+        padding: 10px;
+      }
+
+      /* SPRITE */
+      .sprite-container {
+        width: 300px;
+        height: 300px;
+        margin: 16px auto 8px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        background: transparent;
+      }
+
+      #sprite {
+        position: absolute;
+        max-width: none;
+        max-height: none;
+        width: auto;
+        height: auto;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-drag: none;
+        transform-origin: 50% 50%;
+      }
+
+      #sprite.jumping {
+        animation: spriteJump 0.45s ease-out 1;
+      }
+
+      #sprite.reverse-jumping {
+        animation: spriteReverseJump 0.45s ease-out 1;
+      }
+
+      @keyframes spriteJump {
+        0% {
+          transform: translate(var(--crop-x, 0), var(--crop-y, 0));
+        }
+        35% {
+          transform: translate(var(--crop-x, 0), calc(var(--crop-y, 0) - 24px));
+        }
+        100% {
+          transform: translate(var(--crop-x, 0), var(--crop-y, 0));
+        }
+      }
+
+      @keyframes spriteReverseJump {
+        0% {
+          transform: translate(var(--crop-x, 0), var(--crop-y, 0));
+        }
+        35% {
+          transform: translate(var(--crop-x, 0), calc(var(--crop-y, 0) + 24px));
+        }
+        100% {
+          transform: translate(var(--crop-x, 0), var(--crop-y, 0));
+        }
+      }
+
+      .track-include {
+        width: 18px !important;
+        height: 18px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .track-name-input {
+        flex: 1;
+        min-width: 100px;
+        border: 1px solid #bdc3c7;
+        border-radius: 5px;
+        padding: 5px 7px;
+        font-size: 14px;
+        background: #fff;
+      }
+
+      .track-name-input:focus {
+        outline: 2px solid rgba(52, 152, 219, 0.25);
+        border-color: #3498db;
+      }
+
+      .included-label {
+        font-size: 11px;
+        color: #7f8c8d;
+        white-space: nowrap;
+      }
+
+      /* TRACK CONTROLS */
+      .track-volume {
+        width: 105px !important;
+        flex-shrink: 0;
+      }
+
+      .track-volume-label {
+        width: 42px;
+        font-size: 12px;
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      .voice-actions {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+
+      .shuffle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .toggle {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+        margin: 0;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #bdc3c7;
+        border-radius: 26px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        left: 3px;
+        top: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background: #3498db;
+      }
+
+      .toggle input:checked + .toggle-slider::before {
+        transform: translateX(22px);
+      }
+
+      .secondary-btn {
+        background: #7f8c8d;
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 260px;
+        overflow-y: auto;
+        padding: 5px;
+      }
+
+      .history-item {
+        background: white;
+        border: 1px solid #d5d8dc;
+        border-radius: 7px;
+        padding: 8px 10px;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .history-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .history-time {
+        color: #7f8c8d;
+        flex-shrink: 0;
+      }
+
+      .import-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      #audioFileInput {
+        max-width: 100%;
+      }
+
+      @media (max-width: 600px) {
+        .sprite-container {
+          width: 300px;
+          height: 300px;
+          max-width: 100%;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .voice-item {
+          flex-wrap: wrap;
+        }
+
+        .track-name-input {
+          min-width: 140px;
+        }
+
+        .voice-actions {
+          width: 100%;
+          justify-content: flex-end;
+        }
+      }
+
+      @media (max-width: 800px) {
+        .player-layout {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .right-column {
+          text-align: left;
+        }
+      }
+
+      /*MOBILE*/
+
+      @media (max-width: 600px) {
+        .container {
+          padding: 1.5rem;
+        }
+
+        .interval-row {
+          flex-direction: column;
+        }
+
+        .voice-item {
+          align-items: center;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h2>Random Ui noise Player</h2>
+      <p class="description">Plays a random Ui noise, at random intervals.</p>
+
+      <div class="player-layout">
+        <div class="left-column">
+          <!-- SPRITE -->
+          <div class="sprite-container">
+            <img
+              id="sprite"
+              src="https://static.wikitide.net/bluearchivewiki/d/dc/Ui_00.png"
+              alt="Character sprite"
+              draggable="false"
+            />
+          </div>
+
+          <!-- SETTINGS -->
+          <div class="settings">
+            <!-- INTERVAL -->
+            <div class="setting">
+              <label>Interval (seconds)</label>
+
+              <div class="interval-row">
+                <input
+                  id="minInterval"
+                  class="interval-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value="10"
+                  placeholder="Minimum"
+                />
+
+                <input
+                  id="maxInterval"
+                  class="interval-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value="30"
+                  placeholder="Maximum"
+                />
+              </div>
+            </div>
+
+            <!-- VOLUME -->
+            <div class="setting">
+              <label>
+                Volume
+                <span id="volumeValue" class="setting-value">50%</span>
+              </label>
+
+              <input
+                id="volumeSlider"
+                type="range"
+                min="0"
+                max="100"
+                value="50"
+              />
+            </div>
+
+            <!-- REVERB -->
+            <div class="setting">
+              <label>
+                Reverb
+                <span id="reverbValue" class="setting-value">15%</span>
+              </label>
+
+              <input
+                id="reverbSlider"
+                type="range"
+                min="0"
+                max="100"
+                value="15"
+              />
+            </div>
+
+            <!-- SHUFFLE -->
+            <div class="setting">
+              <label>Shuffle Mode</label>
+              <div class="shuffle-row">
+                <label class="toggle" title="Shuffle playback order">
+                  <input id="shuffleToggle" type="checkbox" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span id="shuffleValue" class="setting-value">On</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MAIN BUTTONS -->
+          <div class="buttons">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+          </div>
+
+          <!-- STATUS -->
+          <div id="status">Ready to start.</div>
+        </div>
+
+        <div class="right-column">
+          <!-- PLAYBACK HISTORY -->
+          <div class="voice-list-container">
+            <div class="voice-list-title">Playback History</div>
+            <div id="historyList" class="history-list">
+              <div class="no-voices">No playback history yet.</div>
+            </div>
+            <div class="buttons">
+              <button id="clearHistoryBtn" class="secondary-btn" type="button">
+                Clear History
+              </button>
+            </div>
+          </div>
+
+          <!-- IMPORT AUDIO: UNDER VOICE LIST -->
+          <div class="voice-list-container">
+            <div class="voice-list-title">Import Audio</div>
+            <div class="import-row">
+              <input
+                id="audioFileInput"
+                type="file"
+                accept="audio/*"
+                multiple
+              />
+              <button id="clearImportedBtn" class="secondary-btn" type="button">
+                Clear Imported
+              </button>
+            </div>
+
+            <!-- VOICE LIST -->
+            <div class="voice-list-container">
+              <div class="voice-list-title">Voice List</div>
+              <div id="voiceList" class="voice-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // AUDIO FILES
+      const defaultAudioFiles = [
+        "https://static.wikitide.net/bluearchivewiki/2/2d/Ui_Formation_Select.ogg",
+        "https://static.wikitide.net/bluearchivewiki/6/62/Ui_%28Swimsuit%29_Battle_Damage_1.ogg",
+        "https://static.wikitide.net/bluearchivewiki/6/6f/Ui_%28Swimsuit%29_Battle_Retire.ogg",
+        //"https://static.wikitide.net/bluearchivewiki/e/ee/Ui_Battle_TacticalAction_1.ogg",
+        "https://static.wikitide.net/bluearchivewiki/b/b1/Ui_Battle_Damage_2.ogg",
+        //"https://static.wikitide.net/bluearchivewiki/7/7d/Ui_Battle_Damage_3.ogg",
+      ];
+
+      const SPRITES = {
+        Idle: "https://static.wikitide.net/bluearchivewiki/d/dc/Ui_00.png",
+        Blink: "https://static.wikitide.net/bluearchivewiki/8/8d/Ui_07.png",
+        Startled01:
+          "https://static.wikitide.net/bluearchivewiki/2/23/Ui_20.png",
+        Startled02:
+          "https://static.wikitide.net/bluearchivewiki/2/23/Ui_20.png",
+        Scared: "https://static.wikitide.net/bluearchivewiki/e/eb/Ui_10.png",
+        Sigh: "https://static.wikitide.net/bluearchivewiki/6/6a/Ui_12.png",
+        Happy: "https://static.wikitide.net/bluearchivewiki/9/9e/Ui_22.png",
+      };
+
+      const HEART_SFX =
+        "https://static.wikitide.net/bluearchivewiki/e/e9/SFX_Emoticon_Motion_Heart.wav";
+
+      // SPRITE CROP
+      // These are SOURCE IMAGE coordinates.
+      // Change these four values to choose the part of the PNG to display.
+      // The crop is rendered in a 300 x 300 square on the page.
+      const SPRITE_CROP = {
+        left: 178,
+        top: 80,
+        right: 478,
+        bottom: 380,
+        displayWidth: 300,
+        displayHeight: 300,
+      };
+
+      let audioFiles = [...defaultAudioFiles];
+      const importedFiles = new Map();
+      const trackVolumes = {};
+      const trackNames = {};
+      const trackIncluded = {};
+      let shuffleEnabled = true;
+      let shuffleQueue = [];
+      let history = [];
+
+      // STATE
+      let timeoutId = null;
+      let currentAudio = null;
+      let currentSource = null;
+      let currentGain = null;
+      let isRunning = false;
+      let lastPlayedIndex = -1;
+
+      // PREVIEW STATE
+      let previewAudio = null;
+      let previewSource = null;
+      let previewGain = null;
+
+      // WEB AUDIO
+      let audioContext = null;
+      let masterGain = null;
+      let dryGain = null;
+      let wetGain = null;
+      let convolver = null;
+
+      // SPRITE STATE
+      let spriteState = "Idle";
+      let blinkTimer = null;
+      let blinkRestoreTimer = null;
+      let happyReleaseTimer = null;
+      let startledToken = 0;
+      let spriteAnimationTimer = null;
+
+      // UI
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const statusText = document.getElementById("status");
+      const minIntervalInput = document.getElementById("minInterval");
+      const maxIntervalInput = document.getElementById("maxInterval");
+      const volumeSlider = document.getElementById("volumeSlider");
+      const volumeValue = document.getElementById("volumeValue");
+      const reverbSlider = document.getElementById("reverbSlider");
+      const reverbValue = document.getElementById("reverbValue");
+      const shuffleToggle = document.getElementById("shuffleToggle");
+      const shuffleValue = document.getElementById("shuffleValue");
+      const voiceList = document.getElementById("voiceList");
+      const historyList = document.getElementById("historyList");
+      const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+      const audioFileInput = document.getElementById("audioFileInput");
+      const clearImportedBtn = document.getElementById("clearImportedBtn");
+      const sprite = document.getElementById("sprite");
+
+      // GET FRIENDLY FILE NAME
+      function getVoiceName(url) {
+        try {
+          const filename = decodeURIComponent(url.split("/").pop());
+          return filename
+            .replace(/\.(ogg|mp3|wav|m4a|aac|flac|webm)$/i, "")
+            .replace(/_/g, " ");
+        } catch (error) {
+          return url;
+        }
+      }
+
+      function getTrackKey(index) {
+        return audioFiles[index];
+      }
+
+      function getTrackVolume(index) {
+        const value = Number(trackVolumes[getTrackKey(index)]);
+        return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 100;
+      }
+
+      function setTrackVolume(index, value) {
+        const clamped = Math.max(0, Math.min(100, Number(value) || 0));
+        trackVolumes[getTrackKey(index)] = clamped;
+        localStorage.setItem(
+          "randomUiTrackVolumes",
+          JSON.stringify(trackVolumes),
+        );
+
+        if (
+          currentAudio &&
+          lastPlayedIndex === index &&
+          currentGain &&
+          audioContext
+        ) {
+          currentGain.gain.setTargetAtTime(
+            clamped / 100,
+            audioContext.currentTime,
+            0.01,
+          );
+        }
+        if (
+          previewAudio &&
+          previewGain &&
+          previewAudio.dataset.index == index &&
+          audioContext
+        ) {
+          previewGain.gain.setTargetAtTime(
+            clamped / 100,
+            audioContext.currentTime,
+            0.01,
+          );
+        }
+      }
+
+      // LOAD PERSISTED SETTINGS
+      try {
+        const savedVolumes = JSON.parse(
+          localStorage.getItem("randomUiTrackVolumes") || "{}",
+        );
+        const savedNames = JSON.parse(
+          localStorage.getItem("randomUiTrackNames") || "{}",
+        );
+        const savedIncluded = JSON.parse(
+          localStorage.getItem("randomUiTrackIncluded") || "{}",
+        );
+        Object.assign(trackVolumes, savedVolumes);
+        Object.assign(trackNames, savedNames);
+        Object.assign(trackIncluded, savedIncluded);
+        history = JSON.parse(
+          localStorage.getItem("randomUiPlaybackHistory") || "[]",
+        );
+      } catch (error) {
+        console.warn("Could not load saved settings.", error);
+      }
+
+      // CREATE VOICE LIST
+      function getTrackDisplayName(url) {
+        return trackNames[url] || getVoiceName(url);
+      }
+
+      function isTrackIncluded(url) {
+        return trackIncluded[url] !== false;
+      }
+
+      function saveTrackSettings() {
+        localStorage.setItem(
+          "randomUiTrackVolumes",
+          JSON.stringify(trackVolumes),
+        );
+        localStorage.setItem("randomUiTrackNames", JSON.stringify(trackNames));
+        localStorage.setItem(
+          "randomUiTrackIncluded",
+          JSON.stringify(trackIncluded),
+        );
+      }
+
+      function createVoiceList() {
+        voiceList.innerHTML = "";
+
+        if (audioFiles.length === 0) {
+          const emptyMessage = document.createElement("div");
+          emptyMessage.className = "no-voices";
+          emptyMessage.textContent = "No voices available.";
+          voiceList.appendChild(emptyMessage);
+          return;
+        }
+
+        audioFiles.forEach((url, index) => {
+          const item = document.createElement("div");
+          item.className = "voice-item";
+
+          const include = document.createElement("input");
+          include.className = "track-include";
+          include.type = "checkbox";
+          include.checked = isTrackIncluded(url);
+          include.title = "Include this track in random playback";
+          include.addEventListener("change", () => {
+            trackIncluded[url] = include.checked;
+            saveTrackSettings();
+            rebuildShuffleQueue();
+          });
+
+          const name = document.createElement("input");
+          name.className = "track-name-input";
+          name.type = "text";
+          name.value = getTrackDisplayName(url);
+          name.title = "Track name";
+          name.setAttribute("aria-label", "Track name");
+          name.addEventListener("change", () => {
+            const cleaned = name.value.trim();
+            if (cleaned) {
+              trackNames[url] = cleaned;
+            } else {
+              delete trackNames[url];
+              name.value = getVoiceName(url);
+            }
+            saveTrackSettings();
+            renderHistory();
+          });
+
+          const includedLabel = document.createElement("span");
+          includedLabel.className = "included-label";
+          includedLabel.textContent = "Include";
+
+          const actions = document.createElement("div");
+          actions.className = "voice-actions";
+
+          const volume = document.createElement("input");
+          volume.className = "track-volume";
+          volume.type = "range";
+          volume.min = "0";
+          volume.max = "100";
+          volume.value = String(getTrackVolume(index));
+          volume.title = "Per-track volume";
+          volume.addEventListener("input", () => {
+            setTrackVolume(index, volume.value);
+            volumeLabel.textContent = `${volume.value}%`;
+          });
+
+          const volumeLabel = document.createElement("span");
+          volumeLabel.className = "track-volume-label";
+          volumeLabel.textContent = `${volume.value}%`;
+
+          const button = document.createElement("button");
+          button.className = "preview-btn";
+          button.textContent = "Preview";
+          button.addEventListener("click", () => previewVoice(index, button));
+
+          actions.appendChild(volume);
+          actions.appendChild(volumeLabel);
+          actions.appendChild(button);
+
+          item.appendChild(include);
+          item.appendChild(includedLabel);
+          item.appendChild(name);
+          item.appendChild(actions);
+          voiceList.appendChild(item);
+        });
+      }
+
+      // HISTORY
+      function renderHistory() {
+        historyList.innerHTML = "";
+
+        if (history.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-voices";
+          empty.textContent = "No playback history yet.";
+          historyList.appendChild(empty);
+          return;
+        }
+
+        history.forEach((entry) => {
+          const item = document.createElement("div");
+          item.className = "history-item";
+
+          const name = document.createElement("div");
+          name.className = "history-name";
+          name.title = entry.url;
+          name.textContent = entry.name;
+
+          const time = document.createElement("div");
+          time.className = "history-time";
+          time.textContent = entry.time;
+
+          item.appendChild(name);
+          item.appendChild(time);
+          historyList.appendChild(item);
+        });
+      }
+
+      function addHistory(index) {
+        const entry = {
+          name: getTrackDisplayName(audioFiles[index]),
+          url: audioFiles[index],
+          time: new Date().toLocaleString(),
+        };
+
+        history.unshift(entry);
+        history = history.slice(0, 100);
+
+        try {
+          localStorage.setItem(
+            "randomUiPlaybackHistory",
+            JSON.stringify(history),
+          );
+        } catch (error) {
+          console.warn("Could not save playback history.", error);
+        }
+        renderHistory();
+      }
+
+      clearHistoryBtn.addEventListener("click", () => {
+        history = [];
+        localStorage.removeItem("randomUiPlaybackHistory");
+        renderHistory();
+      });
+
+      // IMPORT AUDIO
+      function getIncludedIndices() {
+        return audioFiles
+          .map((url, index) => ({ url, index }))
+          .filter(({ url }) => isTrackIncluded(url))
+          .map(({ index }) => index);
+      }
+
+      function rebuildShuffleQueue() {
+        shuffleQueue = getIncludedIndices();
+
+        for (let i = shuffleQueue.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffleQueue[i], shuffleQueue[j]] = [
+            shuffleQueue[j],
+            shuffleQueue[i],
+          ];
+        }
+
+        if (shuffleQueue.length > 1 && shuffleQueue[0] === lastPlayedIndex) {
+          [shuffleQueue[0], shuffleQueue[1]] = [
+            shuffleQueue[1],
+            shuffleQueue[0],
+          ];
+        }
+      }
+
+      audioFileInput.addEventListener("change", () => {
+        const files = Array.from(audioFileInput.files || []);
+        files.forEach((file) => {
+          const url = URL.createObjectURL(file);
+          importedFiles.set(url, file);
+          audioFiles.push(url);
+          trackNames[url] = file.name.replace(/\.[^.]+$/, "");
+          trackIncluded[url] = true;
+          trackVolumes[url] = 100;
+        });
+
+        saveTrackSettings();
+
+        if (files.length) {
+          createVoiceList();
+          rebuildShuffleQueue();
+          statusText.textContent = `${files.length} audio file${files.length === 1 ? "" : "s"} imported.`;
+        }
+        audioFileInput.value = "";
+      });
+
+      clearImportedBtn.addEventListener("click", () => {
+        const defaultSet = new Set(defaultAudioFiles);
+        for (const url of audioFiles) {
+          if (!defaultSet.has(url) && importedFiles.has(url)) {
+            URL.revokeObjectURL(url);
+            importedFiles.delete(url);
+            delete trackNames[url];
+            delete trackIncluded[url];
+            delete trackVolumes[url];
+          }
+        }
+        audioFiles = [...defaultAudioFiles];
+        Object.keys(trackVolumes).forEach((key) => {
+          if (!audioFiles.includes(key)) delete trackVolumes[key];
+        });
+        saveTrackSettings();
+        rebuildShuffleQueue();
+        createVoiceList();
+        statusText.textContent = "Imported audio cleared.";
+      });
+
+      // INITIALIZE AUDIO
+      function initializeAudio() {
+        if (audioContext) return;
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+          throw new Error("Web Audio API is not supported by this browser.");
+        }
+
+        audioContext = new AudioContext();
+        masterGain = audioContext.createGain();
+        dryGain = audioContext.createGain();
+        wetGain = audioContext.createGain();
+        convolver = audioContext.createConvolver();
+
+        convolver.buffer = createReverbImpulse(audioContext, 2.5, 2.5);
+
+        dryGain.connect(masterGain);
+        convolver.connect(wetGain);
+        wetGain.connect(masterGain);
+        masterGain.connect(audioContext.destination);
+
+        masterGain.gain.value = Number(volumeSlider.value) / 100;
+        updateReverb();
+      }
+
+      function createReverbImpulse(context, duration, decay) {
+        const sampleRate = context.sampleRate;
+        const length = Math.floor(sampleRate * duration);
+        const impulse = context.createBuffer(2, length, sampleRate);
+
+        for (let channel = 0; channel < 2; channel++) {
+          const channelData = impulse.getChannelData(channel);
+          for (let i = 0; i < length; i++) {
+            const time = i / sampleRate;
+            const envelope = Math.pow(1 - time / duration, decay);
+            channelData[i] = (Math.random() * 2 - 1) * envelope;
+          }
+        }
+        return impulse;
+      }
+
+      function updateVolume() {
+        const volume = Number(volumeSlider.value);
+        volumeValue.textContent = `${volume}%`;
+        if (masterGain && audioContext) {
+          masterGain.gain.setTargetAtTime(
+            volume / 100,
+            audioContext.currentTime,
+            0.01,
+          );
+        }
+      }
+
+      function updateReverb() {
+        const reverb = Number(reverbSlider.value);
+        reverbValue.textContent = `${reverb}%`;
+
+        if (!dryGain || !wetGain || !audioContext) return;
+
+        const wet = reverb / 100;
+        const dry = 1 - wet * 0.85;
+        dryGain.gain.setTargetAtTime(dry, audioContext.currentTime, 0.01);
+        wetGain.gain.setTargetAtTime(wet, audioContext.currentTime, 0.01);
+      }
+
+      volumeSlider.addEventListener("input", updateVolume);
+      reverbSlider.addEventListener("input", updateReverb);
+
+      shuffleToggle.addEventListener("change", () => {
+        shuffleEnabled = shuffleToggle.checked;
+        shuffleValue.textContent = shuffleEnabled ? "On" : "Off";
+        rebuildShuffleQueue();
+      });
+
+      // RANDOM INTERVAL
+      function getRandomDelay() {
+        let min = Number(minIntervalInput.value);
+        let max = Number(maxIntervalInput.value);
+
+        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+          throw new Error("Please enter valid interval values.");
+        }
+        if (min < 0 || max < 0) {
+          throw new Error("Intervals cannot be negative.");
+        }
+        if (min > max) {
+          throw new Error(
+            "Minimum interval cannot be greater than maximum interval.",
+          );
+        }
+
+        min *= 1000;
+        max *= 1000;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function getRandomVoiceIndex() {
+        const included = getIncludedIndices();
+
+        if (included.length === 0) return -1;
+        if (included.length === 1) return included[0];
+
+        if (!shuffleEnabled) {
+          let randomIndex;
+          do {
+            randomIndex = included[Math.floor(Math.random() * included.length)];
+          } while (randomIndex === lastPlayedIndex);
+          return randomIndex;
+        }
+
+        if (
+          !shuffleQueue.length ||
+          shuffleQueue.every((index) => !isTrackIncluded(audioFiles[index]))
+        ) {
+          rebuildShuffleQueue();
+        }
+
+        const next = shuffleQueue.shift();
+        if (shuffleQueue.length === 0) rebuildShuffleQueue();
+
+        return next ?? included[0];
+      }
+
+      // SPRITE SYSTEM
+      function applySpriteCrop() {
+        const container = sprite.parentElement;
+        if (!container || !sprite.naturalWidth || !sprite.naturalHeight) return;
+
+        const cropWidth = SPRITE_CROP.right - SPRITE_CROP.left;
+        const cropHeight = SPRITE_CROP.bottom - SPRITE_CROP.top;
+
+        if (cropWidth <= 0 || cropHeight <= 0) {
+          console.error(
+            "Invalid sprite crop. right/bottom must be greater than left/top.",
+          );
+          return;
+        }
+
+        // Scale the selected source crop to fit inside the square without distortion.
+        const scale = Math.min(
+          container.clientWidth / cropWidth,
+          container.clientHeight / cropHeight,
+        );
+
+        const renderedWidth = sprite.naturalWidth * scale;
+        const renderedHeight = sprite.naturalHeight * scale;
+
+        // Center the selected crop in the 300 x 300 viewport.
+        const cropCenterX = (SPRITE_CROP.left + SPRITE_CROP.right) / 2;
+        const cropCenterY = (SPRITE_CROP.top + SPRITE_CROP.bottom) / 2;
+        const x = container.clientWidth / 2 - cropCenterX * scale;
+        const y = container.clientHeight / 2 - cropCenterY * scale;
+
+        sprite.style.width = `${renderedWidth}px`;
+        sprite.style.height = `${renderedHeight}px`;
+        sprite.style.left = `${x}px`;
+        sprite.style.top = `${y}px`;
+        sprite.style.setProperty("--crop-x", "0px");
+        sprite.style.setProperty("--crop-y", "0px");
+      }
+
+      function setSprite(name) {
+        if (!SPRITES[name]) return;
+        spriteState = name;
+        sprite.src = SPRITES[name];
+        sprite.onload = applySpriteCrop;
+        sprite.classList.remove("happy");
+        if (name === "Happy") sprite.classList.add("happy");
+
+        // Cached images may not fire onload again.
+        if (sprite.complete) applySpriteCrop();
+      }
+
+      function clearSpriteAnimation() {
+        clearTimeout(spriteAnimationTimer);
+        sprite.classList.remove("jumping", "reverse-jumping");
+      }
+
+      function playSpriteAnimation(className) {
+        clearSpriteAnimation();
+        // Force animation restart.
+        void sprite.offsetWidth;
+        sprite.classList.add(className);
+        spriteAnimationTimer = setTimeout(() => {
+          sprite.classList.remove(className);
+        }, 500);
+      }
+
+      function scheduleBlink() {
+        clearTimeout(blinkTimer);
+        const delay = 60000 / (15 + Math.random() * 5); // average 15–20 blinks/minute
+        blinkTimer = setTimeout(() => {
+          if (spriteState === "Idle") {
+            setSprite("Blink");
+
+            const blinkDuration = 100 + Math.random() * 300;
+            const doubleBlink = Math.random() < 0.22;
+
+            clearTimeout(blinkRestoreTimer);
+            blinkRestoreTimer = setTimeout(() => {
+              if (spriteState === "Blink") setSprite("Idle");
+
+              if (doubleBlink && spriteState === "Idle") {
+                setTimeout(
+                  () => {
+                    if (spriteState !== "Idle") return;
+                    setSprite("Blink");
+                    setTimeout(
+                      () => {
+                        if (spriteState === "Blink") setSprite("Idle");
+                        scheduleBlink();
+                      },
+                      100 + Math.random() * 300,
+                    );
+                  },
+                  70 + Math.random() * 140,
+                );
+              } else {
+                scheduleBlink();
+              }
+            }, blinkDuration);
+          } else {
+            scheduleBlink();
+          }
+        }, delay);
+      }
+
+      function startIdleBehaviour() {
+        clearTimeout(blinkTimer);
+        setSprite("Idle");
+        scheduleBlink();
+      }
+
+      function playHeartSfx() {
+        try {
+          const audio = new Audio(HEART_SFX);
+          audio.volume = 1;
+          audio.play().catch(() => {});
+        } catch (error) {
+          console.warn("Heart SFX failed.", error);
+        }
+      }
+
+      function makeSpriteHappy() {
+        if (
+          spriteState === "Startled01" ||
+          spriteState === "Startled02" ||
+          spriteState === "Scared" ||
+          spriteState === "Sigh"
+        )
+          return;
+
+        clearTimeout(happyReleaseTimer);
+        clearTimeout(blinkTimer);
+        setSprite("Happy");
+        playHeartSfx();
+
+        happyReleaseTimer = setTimeout(() => {
+          if (spriteState === "Happy") startIdleBehaviour();
+        }, 1000);
+      }
+
+      sprite.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        makeSpriteHappy();
+      });
+
+      sprite.addEventListener("pointerup", () => {
+        // Happy intentionally remains for the full 1-second release time.
+      });
+
+      async function playStartledBehaviour() {
+        const token = ++startledToken;
+        clearTimeout(blinkTimer);
+        clearTimeout(blinkRestoreTimer);
+        clearTimeout(happyReleaseTimer);
+
+        const startledName = Math.random() < 0.5 ? "Startled01" : "Startled02";
+        setSprite(startledName);
+        playSpriteAnimation("jumping");
+
+        // Wait until the currently playing voice ends.
+        // The caller is responsible for the final Scared/Sigh transition.
+        return token;
+      }
+
+      function beginScaredAfterSound(token) {
+        if (token !== startledToken) return;
+
+        setSprite("Scared");
+        const scaredDuration = 2000 + Math.random() * 8000;
+
+        setTimeout(() => {
+          if (token !== startledToken) return;
+          setSprite("Sigh");
+          playSpriteAnimation("reverse-jumping");
+
+          setTimeout(() => {
+            if (token !== startledToken) return;
+            startIdleBehaviour();
+          }, 450);
+        }, scaredDuration);
+      }
+
+      // PLAY RANDOM VOICE
+      async function playRandomVoice() {
+        if (!isRunning) return;
+
+        if (getIncludedIndices().length === 0) {
+          statusText.textContent = "No included audio files available.";
+          return;
+        }
+
+        try {
+          initializeAudio();
+
+          if (audioContext.state === "suspended") {
+            await audioContext.resume();
+          }
+
+          const randomIndex = getRandomVoiceIndex();
+          lastPlayedIndex = randomIndex;
+
+          const audio = new Audio(audioFiles[randomIndex]);
+          audio.crossOrigin = "anonymous";
+          currentAudio = audio;
+
+          currentSource = audioContext.createMediaElementSource(audio);
+          currentGain = audioContext.createGain();
+          currentGain.gain.value = getTrackVolume(randomIndex) / 100;
+
+          currentSource.connect(currentGain);
+          currentGain.connect(dryGain);
+          currentGain.connect(convolver);
+
+          const startledTokenForTrack = await playStartledBehaviour();
+
+          statusText.textContent = `Playing: ${getTrackDisplayName(audioFiles[randomIndex])}`;
+          addHistory(randomIndex);
+
+          audio.onended = () => {
+            try {
+              currentSource.disconnect();
+            } catch (error) {}
+            try {
+              currentGain.disconnect();
+            } catch (error) {}
+
+            currentSource = null;
+            currentGain = null;
+            currentAudio = null;
+
+            beginScaredAfterSound(startledTokenForTrack);
+            scheduleNextVoice();
+          };
+
+          audio.onerror = () => {
+            try {
+              currentSource.disconnect();
+            } catch (error) {}
+            try {
+              currentGain.disconnect();
+            } catch (error) {}
+
+            currentSource = null;
+            currentGain = null;
+            currentAudio = null;
+
+            if (isRunning) {
+              statusText.textContent = "Failed to load voice. Trying again...";
+              startIdleBehaviour();
+              timeoutId = setTimeout(playRandomVoice, 1000);
+            }
+          };
+
+          await audio.play();
+        } catch (error) {
+          console.error("Audio playback failed:", error);
+          currentAudio = null;
+          currentSource = null;
+          currentGain = null;
+
+          if (isRunning) {
+            statusText.textContent = "Audio playback failed. Trying again...";
+            startIdleBehaviour();
+            timeoutId = setTimeout(playRandomVoice, 1000);
+          }
+        }
+      }
+
+      // PREVIEW SPRITE BEHAVIOUR
+      function startPreviewSpriteBehaviour() {
+        ++startledToken;
+        const token = startledToken;
+
+        clearTimeout(blinkTimer);
+        clearTimeout(blinkRestoreTimer);
+        clearTimeout(happyReleaseTimer);
+
+        const startledName = Math.random() < 0.5 ? "Startled01" : "Startled02";
+        setSprite(startledName);
+        playSpriteAnimation("jumping");
+
+        return token;
+      }
+
+      function finishPreviewSpriteBehaviour(token) {
+        if (token !== startledToken) return;
+
+        setSprite("Scared");
+        const scaredDuration = 2000 + Math.random() * 8000;
+
+        setTimeout(() => {
+          if (token !== startledToken) return;
+
+          setSprite("Sigh");
+          playSpriteAnimation("reverse-jumping");
+
+          setTimeout(() => {
+            if (token !== startledToken) return;
+            startIdleBehaviour();
+          }, 450);
+        }, scaredDuration);
+      }
+
+      // PREVIEW VOICE
+      async function previewVoice(index, button) {
+        try {
+          initializeAudio();
+
+          if (audioContext.state === "suspended") {
+            await audioContext.resume();
+          }
+
+          // Stop previous preview and invalidate its sprite sequence.
+          ++startledToken;
+
+          if (previewAudio) {
+            previewAudio.pause();
+            previewAudio.currentTime = 0;
+            previewAudio = null;
+          }
+
+          if (previewSource) {
+            try {
+              previewSource.disconnect();
+            } catch (error) {}
+            previewSource = null;
+          }
+
+          if (previewGain) {
+            try {
+              previewGain.disconnect();
+            } catch (error) {}
+            previewGain = null;
+          }
+
+          document.querySelectorAll(".preview-btn").forEach((btn) => {
+            btn.textContent = "Preview";
+            btn.classList.remove("playing");
+          });
+
+          const audio = new Audio(audioFiles[index]);
+          audio.crossOrigin = "anonymous";
+          audio.dataset.index = String(index);
+          previewAudio = audio;
+
+          previewSource = audioContext.createMediaElementSource(audio);
+          previewGain = audioContext.createGain();
+          previewGain.gain.value = getTrackVolume(index) / 100;
+
+          previewSource.connect(previewGain);
+          previewGain.connect(dryGain);
+          previewGain.connect(convolver);
+
+          const previewToken = startPreviewSpriteBehaviour();
+
+          button.textContent = "Playing...";
+          button.classList.add("playing");
+
+          audio.onended = () => {
+            try {
+              previewSource.disconnect();
+            } catch (error) {}
+            try {
+              previewGain.disconnect();
+            } catch (error) {}
+
+            previewSource = null;
+            previewGain = null;
+            previewAudio = null;
+
+            button.textContent = "Preview";
+            button.classList.remove("playing");
+
+            finishPreviewSpriteBehaviour(previewToken);
+          };
+
+          audio.onerror = () => {
+            try {
+              previewSource.disconnect();
+            } catch (error) {}
+            try {
+              previewGain.disconnect();
+            } catch (error) {}
+
+            previewSource = null;
+            previewGain = null;
+            previewAudio = null;
+
+            button.textContent = "Error";
+            button.classList.remove("playing");
+
+            if (previewToken === startledToken) {
+              startIdleBehaviour();
+            }
+          };
+
+          await audio.play();
+        } catch (error) {
+          console.error("Preview playback failed:", error);
+          button.textContent = "Error";
+          button.classList.remove("playing");
+          startIdleBehaviour();
+        }
+      }
+
+      // SCHEDULE NEXT VOICE
+      function scheduleNextVoice() {
+        if (!isRunning) return;
+
+        let randomDelay;
+        try {
+          randomDelay = getRandomDelay();
+        } catch (error) {
+          statusText.textContent = error.message;
+          statusText.classList.add("error");
+          return;
+        }
+
+        statusText.classList.remove("error");
+        statusText.textContent = `Next voice in ${(randomDelay / 1000).toFixed(1)} seconds...`;
+
+        timeoutId = setTimeout(() => {
+          timeoutId = null;
+          playRandomVoice();
+        }, randomDelay);
+      }
+
+      // START
+      startBtn.addEventListener("click", async () => {
+        if (isRunning) return;
+
+        try {
+          getRandomDelay();
+        } catch (error) {
+          statusText.textContent = error.message;
+          statusText.classList.add("error");
+          return;
+        }
+
+        if (getIncludedIndices().length === 0) {
+          statusText.textContent = "No included audio files available.";
+          return;
+        }
+
+        try {
+          initializeAudio();
+          await audioContext.resume();
+        } catch (error) {
+          console.error(error);
+          statusText.textContent = error.message;
+          statusText.classList.add("error");
+          return;
+        }
+
+        statusText.classList.remove("error");
+        isRunning = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        rebuildShuffleQueue();
+        playRandomVoice();
+      });
+
+      // STOP
+      stopBtn.addEventListener("click", () => {
+        isRunning = false;
+        ++startledToken;
+
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          currentAudio = null;
+        }
+
+        if (currentSource) {
+          try {
+            currentSource.disconnect();
+          } catch (error) {}
+          currentSource = null;
+        }
+
+        if (currentGain) {
+          try {
+            currentGain.disconnect();
+          } catch (error) {}
+          currentGain = null;
+        }
+
+        if (previewAudio) {
+          previewAudio.pause();
+          previewAudio.currentTime = 0;
+          previewAudio = null;
+        }
+
+        if (previewSource) {
+          try {
+            previewSource.disconnect();
+          } catch (error) {}
+          previewSource = null;
+        }
+
+        if (previewGain) {
+          try {
+            previewGain.disconnect();
+          } catch (error) {}
+          previewGain = null;
+        }
+
+        document.querySelectorAll(".preview-btn").forEach((button) => {
+          button.textContent = "Preview";
+          button.classList.remove("playing");
+        });
+
+        clearTimeout(blinkTimer);
+        clearTimeout(blinkRestoreTimer);
+        clearTimeout(happyReleaseTimer);
+        clearSpriteAnimation();
+        startIdleBehaviour();
+
+        statusText.classList.remove("error");
+        statusText.textContent = "Stopped.";
+      });
+
+      // PRELOAD SPRITES
+      Object.values(SPRITES).forEach((url) => {
+        const img = new Image();
+        img.src = url;
+      });
+
+      window.addEventListener("resize", applySpriteCrop);
+      sprite.addEventListener("load", applySpriteCrop);
+
+      createVoiceList();
+      renderHistory();
+      startIdleBehaviour();
+    </script>
+  </body>
+</html>
